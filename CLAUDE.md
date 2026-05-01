@@ -38,9 +38,10 @@ Venv wird von `install.sh` automatisch erstellt und befüllt.
 | Mechanismus | Datei | Zweck | Timing |
 |---|---|---|---|
 | root `@reboot` crontab | `modem/start-qmi.sh` | LTE-Verbindung via QMI | Boot + 0 s |
-| root `@reboot` crontab | `gnss/config_ublox.py` | u-blox Chip konfigurieren | Boot + 45 s |
-| systemd `gnss-logger.service` | `gnss/rawx_logger.py` | RAWX aufzeichnen + Device-Log schreiben | kontinuierlich |
-| root `cron 5 * * * *` | `gnss/uploader.py` | Upload zu AWARE-Server | jede Stunde :05 |
+| systemd `ExecStartPre` | `gnss/config_ublox.py` | u-blox Chip konfigurieren | Boot + 60 s (nach sleep) |
+| systemd `gnss-logger.service` | `gnss/rawx_logger.py` | RAWX aufzeichnen + Device-Log schreiben | Boot + ~65 s, dann kontinuierlich |
+| root `cron 5 * * * *` | `gnss/uploader.py` | Upload zu AWARE-Server (inkl. Retry aus error/) | jede Stunde :05 |
+| root `cron 0 3 * * *` | `gnss/housekeeping.py` | Alte Archive löschen, Disk prüfen | täglich 03:00 |
 | systemd `autossh.service` | — | Reverse-SSH-Tunnel → LuckyLuke | kontinuierlich |
 
 ## Konfiguration

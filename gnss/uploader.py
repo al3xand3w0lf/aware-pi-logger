@@ -86,24 +86,29 @@ def main() -> int:
         log.error("AWARE_API_URL or AWARE_API_KEY not configured in config.env")
         return 1
 
-    # Device logs first (lighter, server sees station before big UBX arrives)
-    files = (
+    # Fresh files first (logs before ubx), then retry previously failed uploads
+    fresh = (
         sorted(UPLOAD_DIR.glob(f"{STATION_ID}_log_*.txt"))
         + sorted(UPLOAD_DIR.glob(f"{STATION_ID}_*.ubx"))
     )
+    retries = (
+        sorted(ERROR_DIR.glob(f"{STATION_ID}_log_*.txt"))
+        + sorted(ERROR_DIR.glob(f"{STATION_ID}_*.ubx"))
+    )
+    files = fresh + retries
 
     if not files:
         log.info("Nothing to upload")
         return 0
 
-    log.info("=== uploader start: %d file(s) ===", len(files))
+    log.info("=== uploader start: %d fresh  %d retry ===", len(fresh), len(retries))
     ok = err = 0
     for fpath in files:
-        dest = ARCHIVE_DIR if upload_file(fpath) else ERROR_DIR
-        shutil.move(str(fpath), dest / fpath.name)
-        if dest == ARCHIVE_DIR:
+        if upload_file(fpath):
+            shutil.move(str(fpath), ARCHIVE_DIR / fpath.name)
             ok += 1
         else:
+            shutil.move(str(fpath), ERROR_DIR / fpath.name)
             err += 1
 
     log.info("=== uploader done: %d ok  %d failed ===", ok, err)

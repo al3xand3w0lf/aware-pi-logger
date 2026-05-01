@@ -72,9 +72,10 @@ aware-pi-logger/
 │   ├── config.env.example      ← template (committed)
 │   └── config.env              ← device secrets (git-ignored)
 ├── gnss/
-│   ├── config_ublox.py         ← one-shot u-blox chip configuration
+│   ├── config_ublox.py         ← u-blox chip configuration (ExecStartPre)
 │   ├── rawx_logger.py          ← RAWX recorder + device log writer
-│   ├── uploader.py             ← hourly upload to AWARE server
+│   ├── uploader.py             ← hourly upload + error retry
+│   ├── housekeeping.py         ← daily archive cleanup + disk check
 │   └── logger.py               ← legacy NMEA→CSV logger (not active)
 ├── modem/
 │   ├── start-qmi.sh            ← LTE connection via QMI
@@ -96,9 +97,10 @@ aware-pi-logger/
 | Mechanism | Script | Purpose |
 |---|---|---|
 | root `@reboot` crontab | `modem/start-qmi.sh` | LTE connection via QMI |
-| root `@reboot` crontab | `gnss/config_ublox.py` | Configure u-blox chip (baud, messages) |
+| systemd `ExecStartPre` | `gnss/config_ublox.py` | Configure u-blox chip (runs before logger, after 60 s boot delay) |
 | systemd `gnss-logger.service` | `gnss/rawx_logger.py` | Collect RAWX data + write device log |
-| root `cron 5 * * * *` | `gnss/uploader.py` | Upload files to AWARE server |
+| root `cron 5 * * * *` | `gnss/uploader.py` | Upload to AWARE server (also retries from `upload_error/`) |
+| root `cron 0 3 * * *` | `gnss/housekeeping.py` | Delete archives older than 7 days, check disk |
 | systemd `autossh.service` | — | Reverse SSH tunnel to LuckyLuke |
 
 ## Multiple devices

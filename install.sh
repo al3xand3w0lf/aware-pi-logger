@@ -55,14 +55,14 @@ info "Registering crontab entries..."
 chmod +x "$REPO_DIR/modem/start-qmi.sh"
 PYTHON="$REPO_DIR/venv/bin/python"
 CRON_MODEM="@reboot $REPO_DIR/modem/start-qmi.sh >> $REPO_DIR/logs/modem.log 2>&1"
-CRON_UBLOX="@reboot sleep 45 && $PYTHON $REPO_DIR/gnss/config_ublox.py >> $REPO_DIR/logs/gnss_config.log 2>&1"
 CRON_UPLOAD="5 * * * * $PYTHON $REPO_DIR/gnss/uploader.py >> $REPO_DIR/logs/uploader.log 2>&1"
+CRON_HK="0 3 * * * $PYTHON $REPO_DIR/gnss/housekeeping.py >> $REPO_DIR/logs/housekeeping.log 2>&1"
 (
   crontab -l 2>/dev/null \
-    | grep -v "start-qmi.sh\|config_ublox\|uploader.py"
+    | grep -v "start-qmi.sh\|uploader.py\|housekeeping.py"
   echo "$CRON_MODEM"
-  echo "$CRON_UBLOX"
   echo "$CRON_UPLOAD"
+  echo "$CRON_HK"
 ) | crontab -
 
 # ── 7. AutoSSH systemd service ────────────────────────────────────────────────
@@ -83,15 +83,17 @@ systemctl restart autossh
 info "Installing gnss-logger.service (rawx_logger)..."
 cat > /etc/systemd/system/gnss-logger.service << EOF
 [Unit]
-Description=aware-pi GNSS RAWX Logger (u-blox → UBX binary)
+Description=aware-pi GNSS RAWX Logger (u-blox -> UBX binary)
 After=network.target
 
 [Service]
 User=pi
 WorkingDirectory=$REPO_DIR
+ExecStartPre=/bin/sleep 60
+ExecStartPre=$REPO_DIR/venv/bin/python $REPO_DIR/gnss/config_ublox.py
 ExecStart=$REPO_DIR/venv/bin/python $REPO_DIR/gnss/rawx_logger.py
 Restart=always
-RestartSec=10
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
