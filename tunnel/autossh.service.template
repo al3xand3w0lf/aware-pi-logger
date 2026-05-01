@@ -1,0 +1,20 @@
+[Unit]
+Description=AutoSSH Reverse Tunnel
+After=network.target
+
+[Service]
+User=pi
+ExecStart=/usr/bin/autossh -M 0 -N \
+  -i __SSH_KEY__ \
+  -o "ServerAliveInterval=30" \
+  -o "ServerAliveCountMax=3" \
+  -o "TCPKeepAlive=yes" \
+  -o "ExitOnForwardFailure=yes" \
+  -o "ConnectTimeout=10" \
+  -o "BatchMode=yes" \
+  -R __TUNNEL_PORT__:localhost:22 __TUNNEL_USER__@__TUNNEL_HOST__
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
