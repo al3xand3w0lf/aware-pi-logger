@@ -8,7 +8,7 @@ Collects u-blox UBX RAWX binary data and uploads hourly to the [AWARE](https://a
 | Component | Details |
 |---|---|
 | SBC | Raspberry Pi (arm64, Debian Bookworm) |
-| GNSS | u-blox (USB `/dev/ttyUSB0` or GPIO UART `/dev/serial0`) |
+| GNSS | u-blox (USB CDC `/dev/ttyACM0` or GPIO UART `/dev/serial0`) |
 | LTE Modem | Quectel EC25/EG-25 (USB-ID `2c7c:0125`, QMI interface) |
 | SIM | Swisscom (APN `gprs.swisscom.ch`) |
 | Tunnel | AutoSSH reverse tunnel → LuckyLuke (`192.33.89.14`) |
@@ -56,7 +56,7 @@ Copy `config/config.env.example` and fill in the values. **Never commit this fil
 | Variable | Example | Notes |
 |---|---|---|
 | `STATION_ID` | `T010` | Unique per device. T001–T999 = test, A001–A999 = production |
-| `GNSS_DEVICE` | `/dev/ttyUSB0` | Serial port of u-blox module |
+| `GNSS_DEVICE` | `/dev/ttyACM0` | u-blox USB CDC. GPIO UART = `/dev/serial0` |
 | `GNSS_BAUD` | `38400` | Operating baud (after chip is configured) |
 | `GNSS_INIT_BAUD` | `9600` | Factory default — used on first boot |
 | `TUNNEL_PORT` | `2010` | Unique per device on LuckyLuke |
@@ -144,3 +144,5 @@ ip addr show wwan0
 - **`raw_ip` resets on reboot** — `modem/start-qmi.sh` handles this via `@reboot` cron
 - **`USER` is a reserved shell variable** — modem credentials use `MODEM_USER` / `MODEM_PASS`
 - **RAWX requires baud ≥ 38400** — 9600 is too slow for 1 Hz raw measurements
+- **u-blox USB CDC = `/dev/ttyACM0`** — Quectel modem occupies `ttyUSB0`–`ttyUSB3`; never confuse them
+- **AWARE upload requires `device_id`** — POST body must include `data={"device_id": STATION_ID}` alongside the file
