@@ -187,7 +187,7 @@ def main() -> int:
             try:
                 now_utc = datetime(
                     parsed.year, parsed.month, parsed.day,
-                    parsed.hour, parsed.min, parsed.sec,
+                    parsed.hour, parsed.min, parsed.second,
                     tzinfo=timezone.utc,
                 )
             except Exception:
@@ -238,9 +238,9 @@ def main() -> int:
                 mono = time.monotonic()
                 if mono - last_pos_log >= POS_LOG_INTERVAL:
                     last_pos_log = mono
-                    lat    = parsed.lat     # degrees (auto-scaled by pyubx2)
-                    lon    = parsed.lon     # degrees
-                    height = int(parsed.hMSL)   # metres
+                    lat    = parsed.lat            # degrees (auto-scaled by pyubx2)
+                    lon    = parsed.lon            # degrees
+                    height = int(parsed.hMSL // 1000)  # mm → m
                     nsv    = getattr(parsed, "numSV", 0)
                     if device_log and not device_log.closed:
                         device_log.write(log_line(
