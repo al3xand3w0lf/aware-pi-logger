@@ -55,6 +55,7 @@ def upload_file(fpath: Path) -> bool:
                     AWARE_API_URL,
                     headers={"X-API-Key": AWARE_API_KEY},
                     files={"file": (fname, f)},
+                    data={"device_id": STATION_ID},
                     timeout=60,
                 )
             if resp.status_code == 201:
