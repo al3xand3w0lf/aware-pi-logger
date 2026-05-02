@@ -25,6 +25,7 @@ Gerätename: **Ikarus**. Jedes Gerät ist eine eigene Instanz dieses Repos mit e
 - **RAWX benötigt ≥ 38400 Baud** – bei 9600 ist der Bus zu langsam für 1-Hz-Rohdaten.
 - **u-blox USB-CDC = `/dev/ttyACM0`** – Quectel belegt `ttyUSB0`–`ttyUSB3`; nie verwechseln.
 - **config_ublox.py `@reboot` mit 45 s Verzögerung** – startet nach dem Modem, bevor gnss-logger.service den Port öffnet.
+- **`udhcpc` braucht absoluten Pfad in Cron** – cron's `PATH` enthält kein `/usr/sbin/`; `start-qmi.sh` ruft `/usr/sbin/udhcpc` direkt auf. Symptom: QMI verbindet, aber `wwan0` bekommt keine IPv4 (`udhcpc: command not found` im modem.log).
 
 ## Python-Umgebung
 

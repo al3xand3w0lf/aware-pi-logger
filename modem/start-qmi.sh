@@ -36,7 +36,11 @@ qmicli -p -d "$DEVICE" \
     --wds-start-network="apn='${APN}',username='${MODEM_USER}',password='${MODEM_PASS}',ip-type=4" \
     --client-no-release-cid
 
-udhcpc -q -f -i "$IFACE"
+/usr/sbin/udhcpc -q -f -i "$IFACE"
+
+# Cellular carrier DNS is unreliable or may conflict with wlan0 DNS.
+# Force public resolvers that are reachable from any interface.
+echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
 
 echo "[$(date)] Done. Interface state:"
 ip addr show "$IFACE"
