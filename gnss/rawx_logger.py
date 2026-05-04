@@ -41,6 +41,11 @@ cfg = load_config()
 GNSS_DEVICE = cfg.get("GNSS_DEVICE", "/dev/ttyUSB0")
 GNSS_BAUD   = int(cfg.get("GNSS_BAUD", 38400))
 STATION_ID  = cfg.get("STATION_ID", "T000")
+
+GNSS_MODEL      = cfg.get("GNSS_MODEL", "ZED-F9P")
+GNSS_INTERVAL_S = float(cfg.get("GNSS_INTERVAL_S", 1.0))
+GNSS_GALILEO    = int(cfg.get("GNSS_GALILEO", 1))
+GNSS_SBAS       = int(cfg.get("GNSS_SBAS", 0))
 RAWX_DIR    = Path(cfg.get("RAWX_DIR",   SCRIPT_DIR / "data" / "rawx"))
 UPLOAD_DIR  = Path(cfg.get("UPLOAD_DIR", SCRIPT_DIR / "data" / "upload_ready"))
 LOG_DIR     = SCRIPT_DIR / "logs"
@@ -222,6 +227,11 @@ def main() -> int:
                 cur_hour   = file_hour
 
                 device_log.write(log_line("INFO", f"GNSS logger started, station={STATION_ID}"))
+                device_log.write(log_line(
+                    "INFO",
+                    f"GNSS: {GNSS_MODEL}, interval={GNSS_INTERVAL_S}s, "
+                    f"Galileo={GNSS_GALILEO}, SBAS={GNSS_SBAS}"
+                ))
                 if lock_sats:
                     device_log.write(log_line("INFO", f"GNSS lock active, sats={lock_sats}"))
                 device_log.flush()
