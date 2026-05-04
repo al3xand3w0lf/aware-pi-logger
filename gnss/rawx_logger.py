@@ -152,11 +152,14 @@ def main() -> int:
     rawx_file  = None
     device_log = None
     cur_hour   = None    # datetime (hour-aligned UTC) of the currently open files
-    last_pos_log = 0.0   # monotonic time of last position log write
+    last_pos_log = time.monotonic()  # start timer now so header position doesn't double-log
 
     # ── Wait for GNSS lock ────────────────────────────────────────────────────
     log.info("Waiting for GNSS lock (NAV-PVT fixType >= 2)...")
     lock_sats = 0
+    lock_lat  = None
+    lock_lon  = None
+    lock_height = None
     while running:
         try:
             raw_msg, parsed = reader.read()
@@ -166,7 +169,10 @@ def main() -> int:
         if parsed and parsed.identity == "NAV-PVT":
             ft = getattr(parsed, "fixType", 0)
             if ft >= 2:
-                lock_sats = getattr(parsed, "numSV", 0)
+                lock_sats   = getattr(parsed, "numSV", 0)
+                lock_lat    = parsed.lat
+                lock_lon    = parsed.lon
+                lock_height = int(parsed.hMSL // 1000)
                 log.info("GNSS lock: fixType=%d  sats=%s", ft, lock_sats)
                 break
 
@@ -234,6 +240,11 @@ def main() -> int:
                 ))
                 if lock_sats:
                     device_log.write(log_line("INFO", f"GNSS lock active, sats={lock_sats}"))
+                if lock_lat is not None:
+                    device_log.write(log_line(
+                        "INFO",
+                        f"Position: lat={lock_lat:.7f}, lon={lock_lon:.7f}, height={lock_height} m"
+                    ))
                 device_log.flush()
                 log.info("Opened: %s  %s", ubx_path.name, dev_path.name)
 
