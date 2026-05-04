@@ -53,14 +53,17 @@ chown -R pi:pi "$REPO_DIR/data"
 # ── 6. Root crontab: modem + u-blox config + uploader ────────────────────────
 info "Registering crontab entries..."
 chmod +x "$REPO_DIR/modem/start-qmi.sh"
+chmod +x "$REPO_DIR/modem/check-lte.sh"
 PYTHON="$REPO_DIR/venv/bin/python"
 CRON_MODEM="@reboot $REPO_DIR/modem/start-qmi.sh >> $REPO_DIR/logs/modem.log 2>&1"
+CRON_LTE="*/15 * * * * $REPO_DIR/modem/check-lte.sh >> $REPO_DIR/logs/modem.log 2>&1"
 CRON_UPLOAD="5 * * * * $PYTHON $REPO_DIR/gnss/uploader.py >> $REPO_DIR/logs/uploader.log 2>&1"
 CRON_HK="0 3 * * * $PYTHON $REPO_DIR/gnss/housekeeping.py >> $REPO_DIR/logs/housekeeping.log 2>&1"
 (
   crontab -l 2>/dev/null \
-    | grep -v "start-qmi.sh\|uploader.py\|housekeeping.py"
+    | grep -v "start-qmi.sh\|check-lte.sh\|uploader.py\|housekeeping.py"
   echo "$CRON_MODEM"
+  echo "$CRON_LTE"
   echo "$CRON_UPLOAD"
   echo "$CRON_HK"
 ) | crontab -
@@ -94,6 +97,7 @@ ExecStartPre=$REPO_DIR/venv/bin/python $REPO_DIR/gnss/config_ublox.py
 ExecStart=$REPO_DIR/venv/bin/python $REPO_DIR/gnss/rawx_logger.py
 Restart=always
 RestartSec=30
+StartLimitBurst=0
 
 [Install]
 WantedBy=multi-user.target
