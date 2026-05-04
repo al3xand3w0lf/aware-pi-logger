@@ -9,6 +9,8 @@ IFACE=wwan0
 APN=gprs.swisscom.ch
 MODEM_USER=gprs
 MODEM_PASS=gprs
+MAX_QMI_RETRIES=5
+QMI_RETRY_WAIT=30
 
 [ -f "$CONFIG" ] && source "$CONFIG"
 
@@ -31,12 +33,33 @@ ip link set "$IFACE" down
 echo 'Y' | tee /sys/class/net/$IFACE/qmi/raw_ip
 ip link set "$IFACE" up
 
-qmicli -p -d "$DEVICE" \
-    --device-open-net='net-raw-ip|net-no-qos-header' \
-    --wds-start-network="apn='${APN}',username='${MODEM_USER}',password='${MODEM_PASS}',ip-type=4" \
-    --client-no-release-cid
+# Retry loop — modem may not yet be registered on boot (generic-no-service is transient)
+QMI_OK=0
+for attempt in $(seq 1 $MAX_QMI_RETRIES); do
+    echo "[$(date)] QMI start-network attempt $attempt/$MAX_QMI_RETRIES..."
+    if qmicli -p -d "$DEVICE" \
+        --device-open-net='net-raw-ip|net-no-qos-header' \
+        --wds-start-network="apn='${APN}',username='${MODEM_USER}',password='${MODEM_PASS}',ip-type=4" \
+        --client-no-release-cid; then
+        QMI_OK=1
+        break
+    fi
+    if [ $attempt -lt $MAX_QMI_RETRIES ]; then
+        echo "[$(date)] QMI failed, retrying in ${QMI_RETRY_WAIT}s..."
+        sleep $QMI_RETRY_WAIT
+    fi
+done
 
-/usr/sbin/udhcpc -q -f -i "$IFACE"
+if [ $QMI_OK -ne 1 ]; then
+    echo "[$(date)] ERROR: QMI start-network failed after $MAX_QMI_RETRIES attempts. LTE not available."
+    exit 1
+fi
+
+# Bounded DHCP — fail fast, don't loop forever when QMI session has no carrier
+if ! /usr/sbin/udhcpc -q -f -t 10 -T 5 -i "$IFACE"; then
+    echo "[$(date)] ERROR: udhcpc failed to obtain lease on $IFACE."
+    exit 1
+fi
 
 # Cellular carrier DNS is unreliable or may conflict with wlan0 DNS.
 # Force public resolvers that are reachable from any interface.

@@ -48,8 +48,9 @@ LOG_DIR     = SCRIPT_DIR / "logs"
 # Write a position entry to the device log every N seconds
 POS_LOG_INTERVAL = 300
 
-GPS_EPOCH    = datetime(1980, 1, 6, tzinfo=timezone.utc)
-LEAP_SECONDS = 18
+GPS_EPOCH     = datetime(1980, 1, 6, tzinfo=timezone.utc)
+LEAP_SECONDS  = 18
+MIN_VALID_UTC = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -118,9 +119,11 @@ def move_dir_to_upload() -> None:
         log.info("Moved %d file(s) to upload dir", moved)
 
 
-def gps_to_utc(week: int, rcv_tow: float) -> datetime:
-    total_sec = week * 604800 + rcv_tow - LEAP_SECONDS
-    return GPS_EPOCH + timedelta(seconds=total_sec)
+def gps_to_utc(week: int, rcv_tow: float) -> "datetime | None":
+    if week == 0:
+        return None
+    dt = GPS_EPOCH + timedelta(seconds=week * 604800 + rcv_tow - LEAP_SECONDS)
+    return dt if dt >= MIN_VALID_UTC else None
 
 
 def hour_start(dt: datetime) -> datetime:

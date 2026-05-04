@@ -77,27 +77,37 @@ def send_command(ser: serial.Serial, cmd: bytes, desc: str) -> None:
         log.warning("No response for %s", desc)
 
 
+MAX_OPEN_RETRIES = 10
+OPEN_RETRY_WAIT  = 10
+
+
 def main() -> int:
     log.info("=== u-blox config start ===")
     log.info("Device: %s  target baud: %d  init baud: %d",
              GNSS_DEVICE, GNSS_BAUD, GNSS_INIT_BAUD)
 
     ser = None
-    # Try target baud first (device already configured), fall back to factory default
-    for baud in (GNSS_BAUD, GNSS_INIT_BAUD):
-        try:
-            s = serial.Serial(GNSS_DEVICE, baud, timeout=1)
-            s.flushInput()
-            time.sleep(0.3)
-            probe = s.read(s.in_waiting or 1)
-            log.info("Opened at %d baud (probe: %d bytes)", baud, len(probe))
-            ser = s
+    for attempt in range(1, MAX_OPEN_RETRIES + 1):
+        # Try target baud first (device already configured), fall back to factory default
+        for baud in (GNSS_BAUD, GNSS_INIT_BAUD):
+            try:
+                s = serial.Serial(GNSS_DEVICE, baud, timeout=1)
+                s.flushInput()
+                time.sleep(0.3)
+                probe = s.read(s.in_waiting or 1)
+                log.info("Opened at %d baud (probe: %d bytes)", baud, len(probe))
+                ser = s
+                break
+            except serial.SerialException as e:
+                log.warning("Open at %d baud failed: %s", baud, e)
+        if ser:
             break
-        except serial.SerialException as e:
-            log.warning("Open at %d baud failed: %s", baud, e)
+        log.warning("Device not ready, attempt %d/%d — retrying in %ds...",
+                    attempt, MAX_OPEN_RETRIES, OPEN_RETRY_WAIT)
+        time.sleep(OPEN_RETRY_WAIT)
 
     if ser is None:
-        log.error("Cannot open %s at any baud rate", GNSS_DEVICE)
+        log.error("Cannot open %s after %d attempts", GNSS_DEVICE, MAX_OPEN_RETRIES)
         return 1
 
     try:
